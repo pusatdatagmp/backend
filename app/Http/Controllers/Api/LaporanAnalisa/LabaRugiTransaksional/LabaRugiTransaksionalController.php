@@ -48,7 +48,7 @@ class LabaRugiTransaksionalController extends Controller
             $sppgId ?? 'all'
         );
 
-        $report = Cache::tags([CacheInvalidation::TAG_LABA_RUGI_TRANSAKSIONAL])->remember(
+       $report = Cache::remember(
             $cacheKey,
             now()->addMinutes(5),
             function () use ($tanggalAwal, $tanggalAkhir, $tanggalAwalString, $tanggalAkhirString, $sppgId): array {

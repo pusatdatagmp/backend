@@ -13,34 +13,31 @@ class CacheInvalidation
 
     public static function flushDashboardSummary(): void
     {
-        Cache::tags([self::TAG_DASHBOARD_SUMMARY])->flush();
+        Cache::flush();
     }
 
     public static function flushDashboardSalesBySppg(): void
     {
-        Cache::tags([self::TAG_DASHBOARD_SALES_BY_SPPG])->flush();
+        Cache::flush();
     }
 
     public static function flushLaporanStokBarang(): void
     {
-        Cache::tags([self::TAG_LAPORAN_STOK_BARANG])->flush();
+        Cache::flush();
     }
 
     public static function flushLabaRugiTransaksional(): void
     {
-        Cache::tags([self::TAG_LABA_RUGI_TRANSAKSIONAL])->flush();
+        Cache::flush();
     }
 
     public static function flushFinancialCaches(): void
     {
-        self::flushDashboardSummary();
-        self::flushDashboardSalesBySppg();
-        self::flushLabaRugiTransaksional();
+        Cache::flush();
     }
 
     public static function flushStockCaches(): void
     {
-        self::flushDashboardSummary();
-        self::flushLaporanStokBarang();
+        Cache::flush();
     }
 }

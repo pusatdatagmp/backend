@@ -50,7 +50,7 @@ class LaporanStokBarangController extends Controller
             $sortField.'-'.$sortOrder
         );
 
-        $cached = Cache::tags([CacheInvalidation::TAG_LAPORAN_STOK_BARANG])->remember($cacheKey, now()->addMinutes(5), function () use ($jenisStok, $gudangId, $periode, $tanggalAcuan, $search, $sortField, $sortOrder): array {
+       $cached = Cache::remember($cacheKey, now()->addMinutes(5), function () use ($jenisStok, $gudangId, $periode, $tanggalAcuan, $search, $sortField, $sortOrder): array {
             $records = $this->collectStockRows($jenisStok, $gudangId, $periode, $tanggalAcuan)
                 ->when($search !== '', function (Collection $rows) use ($search): Collection {
                     return $rows->filter(function (array $row) use ($search): bool {
