@@ -26,11 +26,13 @@ class InvoicePenjualan extends Model
         'tanggal_invoice',
         'total_tagihan',
         'status_pembayaran',
+        'stock_deducted_at',
     ];
 
     protected $casts = [
         'tanggal_invoice' => 'date:Y-m-d',
         'total_tagihan' => 'decimal:2',
+        'stock_deducted_at' => 'datetime',
     ];
 
     protected $appends = [

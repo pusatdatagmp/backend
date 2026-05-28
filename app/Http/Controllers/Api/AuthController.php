@@ -114,25 +114,42 @@ class AuthController extends Controller
     }
 
     /**
-     * @return array{id:int, nama:string, email:string, role:string}
+     * @return array{id:int, nama:string, email:string, role:string, permissions:list<array{id:int, code:string, name:string, group_name:string|null}>}
      */
     private function formatUser(User $user): array
     {
+        $user->loadMissing('permissions');
+
         return [
             'id' => $user->id,
             'nama' => $user->nama ?? $user->name ?? '',
             'email' => $user->email,
-            'role' => $this->normalizeRole((string) $user->role),
+            'role' => $this->displayRole((string) ($user->role_label ?: $user->role)),
+            'permissions' => $user->permissions
+                ->map(fn ($permission): array => [
+                    'id' => $permission->id,
+                    'code' => $permission->code,
+                    'name' => $permission->name,
+                    'group_name' => $permission->group_name,
+                ])
+                ->values()
+                ->all(),
         ];
     }
 
-    private function normalizeRole(string $role): string
+    private function displayRole(string $role): string
     {
-        return match (strtolower(trim($role))) {
-            'superadmin', 'super_admin' => 'superadmin',
-            'user', 'admin' => 'admin',
-            default => 'admin',
-        };
+        $normalized = strtolower(trim($role));
+
+        if (in_array($normalized, ['superadmin', 'super_admin', 'super admin'], true)) {
+            return 'Super Admin';
+        }
+
+        if (in_array($normalized, ['admin', 'user'], true)) {
+            return 'Admin';
+        }
+
+        return trim($role);
     }
 
     private function throttleKey(Request $request, string $email): string

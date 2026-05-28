@@ -9,12 +9,16 @@ use App\Models\MasterData\Sppg;
 use App\Models\TransaksiPembelian\OrderPenawaranItem;
 use App\Models\TransaksiPenjualan\InvoicePenjualan;
 use App\Models\TransaksiPenjualan\Penjualan;
+use App\Models\TransaksiPenjualan\PenjualanItem;
 use App\Models\TransaksiPenjualan\TandaTerima;
+use App\Models\WarehouseSystem\WarehouseStokBasah;
+use App\Models\WarehouseSystem\WarehouseStokKering;
 use App\Support\CacheInvalidation;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -142,9 +146,16 @@ class InvoicePenjualanController extends Controller
     public function store(Request $request): JsonResponse
     {
         $payload = $this->validatePayload($request);
-        $record = InvoicePenjualan::query()->create($payload);
+        $record = DB::transaction(function () use ($payload): InvoicePenjualan {
+            $record = InvoicePenjualan::query()->create($payload);
+            $this->deductStockForInvoice($record);
+
+            return $record;
+        });
+
         CacheInvalidation::flushDashboardSummary();
         CacheInvalidation::flushLabaRugiTransaksional();
+        CacheInvalidation::flushStockCaches();
 
         return response()->json([
             'message' => 'Invoice penjualan berhasil ditambahkan.',
@@ -179,14 +190,24 @@ class InvoicePenjualanController extends Controller
     public function update(Request $request, InvoicePenjualan $invoicePenjualan): JsonResponse
     {
         $payload = $this->validatePayload($request, $invoicePenjualan);
-        $invoicePenjualan->update($payload);
+        $updatedInvoice = DB::transaction(function () use ($invoicePenjualan, $payload): InvoicePenjualan {
+            $this->restoreStockForInvoice($invoicePenjualan);
+            $invoicePenjualan->update($payload);
+
+            $freshInvoice = $invoicePenjualan->fresh(['penjualan', 'sppg']);
+            $this->deductStockForInvoice($freshInvoice);
+
+            return $freshInvoice;
+        });
+
         CacheInvalidation::flushDashboardSummary();
         CacheInvalidation::flushLabaRugiTransaksional();
+        CacheInvalidation::flushStockCaches();
 
         return response()->json([
             'message' => 'Invoice penjualan berhasil diperbarui.',
             'data' => $this->serializeInvoice(
-                $invoicePenjualan->fresh([
+                $updatedInvoice->fresh([
                     'penjualan:id,kode_penjualan,tanggal',
                     'sppg:id,nama_sppg,alamat,no_penanggungjawab',
                     'accounting:id,nama,jabatan,status',
@@ -199,9 +220,14 @@ class InvoicePenjualanController extends Controller
 
     public function destroy(InvoicePenjualan $invoicePenjualan): JsonResponse
     {
-        $invoicePenjualan->delete();
+        DB::transaction(function () use ($invoicePenjualan): void {
+            $this->restoreStockForInvoice($invoicePenjualan);
+            $invoicePenjualan->delete();
+        });
+
         CacheInvalidation::flushDashboardSummary();
         CacheInvalidation::flushLabaRugiTransaksional();
+        CacheInvalidation::flushStockCaches();
 
         return response()->json([
             'message' => 'Invoice penjualan berhasil dihapus.',
@@ -370,6 +396,194 @@ class InvoicePenjualanController extends Controller
             ->values();
     }
 
+    private function deductStockForInvoice(InvoicePenjualan $invoicePenjualan): void
+    {
+        if ($invoicePenjualan->stock_deducted_at !== null) {
+            return;
+        }
+
+        $invoicePenjualan->loadMissing(['penjualan', 'sppg']);
+        $sppg = $invoicePenjualan->sppg;
+        $tanggalKirim = $invoicePenjualan->penjualan?->tanggal?->format('Y-m-d');
+
+        if ($sppg === null || $tanggalKirim === null) {
+            throw ValidationException::withMessages([
+                'invoice' => 'Data penjualan invoice tidak lengkap untuk mengurangi stok.',
+            ]);
+        }
+
+        $penjualanRecords = $this->findMatchingPenjualanRecords($tanggalKirim, $sppg);
+
+        foreach ($penjualanRecords as $penjualan) {
+            foreach ($this->resolvePenjualanItems($penjualan) as $item) {
+                $this->deductStockForItem($invoicePenjualan, $item);
+            }
+        }
+
+        $invoicePenjualan->forceFill(['stock_deducted_at' => now()])->save();
+    }
+
+    private function deductStockForItem(InvoicePenjualan $invoicePenjualan, object $item): void
+    {
+        $requiredQty = (float) ($item->qty ?? 0);
+        if ($requiredQty <= 0) {
+            return;
+        }
+
+        $namaBarang = trim((string) ($item->nama_barang ?? ''));
+        if ($namaBarang === '') {
+            return;
+        }
+
+        $satuan = trim((string) ($item->satuan ?? ''));
+        $gudangId = isset($item->gudang_id) && $item->gudang_id !== null ? (int) $item->gudang_id : null;
+        $stockGroups = collect();
+        $availableQty = 0.0;
+
+        foreach ($this->stockCandidatesForItem($item) as $candidate) {
+            $rows = $candidate['model']::query()
+                ->when($gudangId !== null, fn ($query) => $query->where('gudang_id', $gudangId))
+                ->whereRaw('LOWER(TRIM(nama_barang)) = ?', [Str::lower($namaBarang)])
+                ->when($satuan !== '', function ($query) use ($satuan): void {
+                    $query->whereRaw('LOWER(TRIM(satuan_terkecil)) = ?', [Str::lower($satuan)]);
+                })
+                ->where('qty', '>', 0)
+                ->orderBy('id')
+                ->lockForUpdate()
+                ->get();
+
+            $availableQty += (float) $rows->sum('qty');
+            $stockGroups->push([
+                'table' => $candidate['table'],
+                'rows' => $rows,
+            ]);
+
+            if ($availableQty >= $requiredQty) {
+                break;
+            }
+        }
+
+        if ($availableQty < $requiredQty) {
+            throw ValidationException::withMessages([
+                'stok' => sprintf(
+                    'Stok %s tidak mencukupi. Dibutuhkan %s, tersedia %s.',
+                    $namaBarang,
+                    rtrim(rtrim(number_format($requiredQty, 2, '.', ''), '0'), '.'),
+                    rtrim(rtrim(number_format($availableQty, 2, '.', ''), '0'), '.')
+                ),
+            ]);
+        }
+
+        $remainingQty = $requiredQty;
+        foreach ($stockGroups as $stockGroup) {
+            foreach ($stockGroup['rows'] as $stockRow) {
+                if ($remainingQty <= 0) {
+                    break 2;
+                }
+
+                $deductedQty = min($remainingQty, (float) $stockRow->qty);
+                $stockRow->update([
+                    'qty' => (float) $stockRow->qty - $deductedQty,
+                ]);
+
+                DB::table('invoice_penjualan_stock_movements')->insert([
+                    'invoice_penjualan_id' => $invoicePenjualan->id,
+                    'stock_table' => $stockGroup['table'],
+                    'stock_id' => $stockRow->id,
+                    'gudang_id' => $stockRow->gudang_id,
+                    'nama_barang' => $stockRow->nama_barang,
+                    'satuan_terkecil' => $stockRow->satuan_terkecil,
+                    'harga_beli' => $stockRow->harga_beli,
+                    'qty' => $deductedQty,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                $remainingQty -= $deductedQty;
+            }
+        }
+    }
+
+    private function restoreStockForInvoice(InvoicePenjualan $invoicePenjualan): void
+    {
+        $movements = DB::table('invoice_penjualan_stock_movements')
+            ->where('invoice_penjualan_id', $invoicePenjualan->id)
+            ->orderByDesc('id')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($movements as $movement) {
+            $modelClass = $this->stockModelForTable($movement->stock_table);
+            $stockRow = $modelClass::query()
+                ->whereKey($movement->stock_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($stockRow) {
+                $stockRow->update([
+                    'qty' => (float) $stockRow->qty + (float) $movement->qty,
+                ]);
+
+                continue;
+            }
+
+            $modelClass::query()->create([
+                'gudang_id' => $movement->gudang_id,
+                'nama_barang' => $movement->nama_barang,
+                'qty' => $movement->qty,
+                'satuan_terkecil' => $movement->satuan_terkecil,
+                'harga_beli' => $movement->harga_beli,
+            ]);
+        }
+
+        if ($movements->isNotEmpty()) {
+            DB::table('invoice_penjualan_stock_movements')
+                ->where('invoice_penjualan_id', $invoicePenjualan->id)
+                ->delete();
+        }
+
+        if ($invoicePenjualan->stock_deducted_at !== null) {
+            $invoicePenjualan->forceFill(['stock_deducted_at' => null])->save();
+        }
+    }
+
+    private function stockCandidatesForItem(object $item): array
+    {
+        $kategori = null;
+        if ($item instanceof PenjualanItem) {
+            $kategori = $item->produk?->kategori;
+        } elseif (isset($item->produk) && is_object($item->produk)) {
+            $kategori = $item->produk->kategori ?? null;
+        }
+
+        $normalizedKategori = Str::lower(trim((string) $kategori));
+
+        if (str_contains($normalizedKategori, 'kering')) {
+            return [
+                ['table' => 'warehouse_stok_kering', 'model' => WarehouseStokKering::class],
+            ];
+        }
+
+        if (str_contains($normalizedKategori, 'basah')) {
+            return [
+                ['table' => 'warehouse_stok_basah', 'model' => WarehouseStokBasah::class],
+            ];
+        }
+
+        return [
+            ['table' => 'warehouse_stok_basah', 'model' => WarehouseStokBasah::class],
+            ['table' => 'warehouse_stok_kering', 'model' => WarehouseStokKering::class],
+        ];
+    }
+
+    private function stockModelForTable(string $table): string
+    {
+        return match ($table) {
+            'warehouse_stok_kering' => WarehouseStokKering::class,
+            default => WarehouseStokBasah::class,
+        };
+    }
+
     private function resolvePenjualanItems(Penjualan $penjualan): Collection
     {
         $items = collect(
@@ -404,7 +618,7 @@ class InvoicePenjualanController extends Controller
     private function findMatchingPenjualanRecords(string $tanggalKirim, Sppg $sppg): EloquentCollection
     {
         return Penjualan::query()
-            ->with(['items' => fn ($query) => $query->with('perusahaan')->orderBy('id')])
+            ->with(['items' => fn ($query) => $query->with(['perusahaan', 'produk'])->orderBy('id')])
             ->whereDate('tanggal', $tanggalKirim)
             ->whereHas('orderPenawaran', function ($query) use ($sppg): void {
                 $query->where('nama_pembeli', $sppg->nama_sppg);
