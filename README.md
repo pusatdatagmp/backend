@@ -19,7 +19,7 @@ Powerful backend service built with **Laravel**.
 
 - Laravel
 - PHP
-- MySQL / Postgresql
+- MySQL / Postgresql / sqlite
 - Composer
 
 ---
@@ -179,7 +179,7 @@ Pastikan sudah menginstall:
 
 - PHP 8+
 - Composer
-- MySQL / Postgresql
+- MySQL / Postgresql / sqlite
 - Git
 
 ---
