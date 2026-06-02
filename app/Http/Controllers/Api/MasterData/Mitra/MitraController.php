@@ -28,7 +28,8 @@ class MitraController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama_yayasan) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_yayasan) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(nama_pic) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(no_pic) LIKE ?', ['%'.$keyword.'%']);

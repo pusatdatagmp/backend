@@ -28,7 +28,8 @@ class ArmadaController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama_unit) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_unit) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(no_pol) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(jenis_kendaraan) LIKE ?', ['%'.$keyword.'%']);
                 });

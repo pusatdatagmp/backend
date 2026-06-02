@@ -62,9 +62,17 @@ class SuratJalanController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nomor_surat_jalan) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nomor_surat_jalan) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(no_po) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(tanggal AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(status) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereHas('sppg', fn ($sppgQuery) => $sppgQuery->whereRaw('LOWER(nama_sppg) LIKE ?', ['%'.$keyword.'%']))
+                        ->orWhereHas('armadaRef', function ($armadaQuery) use ($keyword): void {
+                            $armadaQuery
+                                ->whereRaw('LOWER(nama_unit) LIKE ?', ['%'.$keyword.'%'])
+                                ->orWhereRaw('LOWER(no_pol) LIKE ?', ['%'.$keyword.'%']);
+                        })
                         ->orWhereHas('driver', fn ($driverQuery) => $driverQuery->whereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%']));
                 });
             })

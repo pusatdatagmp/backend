@@ -73,7 +73,16 @@ class PenjualanPerSppgController extends Controller
         });
 
         if ($search !== '') {
-            $records = $records->filter(fn (array $row): bool => str_contains(strtolower($row['nama_sppg']), $search))->values();
+            $records = $records->filter(function (array $row) use ($search): bool {
+                $haystack = implode(' ', [
+                    $row['sppg_id'] ?? '',
+                    $row['nama_sppg'] ?? '',
+                    $row['total_penjualan'] ?? '',
+                    $row['persentase'] ?? '',
+                ]);
+
+                return str_contains(strtolower($haystack), $search);
+            })->values();
         }
 
         $records = $this->sortRows($records, $sortField, $sortOrder);

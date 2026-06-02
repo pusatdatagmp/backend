@@ -16,12 +16,14 @@ class DaftarPembelanjaanSupplierController extends Controller
     {
         $filters = $request->validate([
             'tanggal_pesan' => ['nullable', 'date'],
+            'search' => ['nullable', 'string'],
             'sort_field' => ['nullable', Rule::in(['id', 'tanggal_pesan'])],
             'sort_order' => ['nullable', Rule::in(['asc', 'desc'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
         $tanggalPesan = $filters['tanggal_pesan'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'tanggal_pesan';
         $sortOrder = $filters['sort_order'] ?? 'desc';
         $perPage = $filters['per_page'] ?? 10;
@@ -33,6 +35,47 @@ class DaftarPembelanjaanSupplierController extends Controller
                 'items as item_count' => fn ($query) => $query->whereNotNull('supplier_id'),
             ])
             ->when($tanggalPesan, fn ($query, string $tanggal) => $query->whereDate('tanggal_pesan', $tanggal))
+            ->when($search, function ($query, string $keyword): void {
+                $query->where(function ($subQuery) use ($keyword): void {
+                    $subQuery
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(tanggal_pesan AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereHas('items', function ($itemQuery) use ($keyword): void {
+                            $itemQuery
+                                ->whereNotNull('supplier_id')
+                                ->where(function ($itemSubQuery) use ($keyword): void {
+                                    $itemSubQuery
+                                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                                        ->orWhereRaw('LOWER(nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                                        ->orWhereRaw('LOWER(CAST(qty AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                                        ->orWhereRaw('LOWER(satuan) LIKE ?', ['%'.$keyword.'%'])
+                                        ->orWhereRaw('LOWER(CAST(stok AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                                        ->orWhereRaw('LOWER(CAST(kebutuhan AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                                        ->orWhereRaw('LOWER(nama_supplier) LIKE ?', ['%'.$keyword.'%'])
+                                        ->orWhereRaw('LOWER(keterangan) LIKE ?', ['%'.$keyword.'%'])
+                                        ->orWhereHas('supplier', function ($supplierQuery) use ($keyword): void {
+                                            $supplierQuery
+                                                ->whereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
+                                                ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
+                                                ->orWhereRaw('LOWER(no_telp) LIKE ?', ['%'.$keyword.'%'])
+                                                ->orWhereRaw('LOWER(kategori) LIKE ?', ['%'.$keyword.'%']);
+                                        })
+                                        ->orWhereHas('produk', function ($produkQuery) use ($keyword): void {
+                                            $produkQuery
+                                                ->whereRaw('LOWER(sku) LIKE ?', ['%'.$keyword.'%'])
+                                                ->orWhereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
+                                                ->orWhereRaw('LOWER(kategori) LIKE ?', ['%'.$keyword.'%'])
+                                                ->orWhereRaw('LOWER(satuan) LIKE ?', ['%'.$keyword.'%']);
+                                        })
+                                        ->orWhereHas('kategori', function ($kategoriQuery) use ($keyword): void {
+                                            $kategoriQuery
+                                                ->whereRaw('LOWER(kode) LIKE ?', ['%'.$keyword.'%'])
+                                                ->orWhereRaw('LOWER(nama_satuan) LIKE ?', ['%'.$keyword.'%']);
+                                        });
+                                });
+                        });
+                });
+            })
             ->orderBy($sortField, $sortOrder)
             ->paginate($perPage)
             ->withQueryString();

@@ -31,7 +31,8 @@ class UserController extends Controller
 
         if ($search !== '') {
             $query->where(function ($builder) use ($search): void {
-                $builder->whereRaw('LOWER(nama) LIKE ?', ['%' . $search . '%'])
+                $builder->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%' . $search . '%'])
+                    ->orWhereRaw('LOWER(nama) LIKE ?', ['%' . $search . '%'])
                     ->orWhereRaw('LOWER(name) LIKE ?', ['%' . $search . '%'])
                     ->orWhereRaw('LOWER(email) LIKE ?', ['%' . $search . '%'])
                     ->orWhereRaw('LOWER(role) LIKE ?', ['%' . $search . '%'])

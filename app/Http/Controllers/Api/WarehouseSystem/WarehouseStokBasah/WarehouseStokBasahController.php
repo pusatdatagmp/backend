@@ -42,7 +42,11 @@ class WarehouseStokBasahController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(warehouse_stok_basah.nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(warehouse_stok_basah.id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(warehouse_stok_basah.nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(warehouse_stok_basah.qty AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(warehouse_stok_basah.satuan_terkecil) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(warehouse_stok_basah.harga_beli AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(gudang.nama_gudang) LIKE ?', ['%'.$keyword.'%']);
                 });
             })

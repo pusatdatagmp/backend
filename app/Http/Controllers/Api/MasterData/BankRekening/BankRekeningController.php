@@ -28,7 +28,8 @@ class BankRekeningController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama_bank) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_bank) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(no_rek) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(atas_nama) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(cabang) LIKE ?', ['%'.$keyword.'%']);

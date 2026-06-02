@@ -29,7 +29,10 @@ class PemasukanController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(jenis) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(tanggal AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(jenis) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(jumlah AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(keterangan) LIKE ?', ['%'.$keyword.'%']);
                 });
             })

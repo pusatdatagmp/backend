@@ -32,7 +32,11 @@ class DaftarPembelanjaanController extends Controller
         $records = DaftarPembelanjaan::query()
             ->when($tanggalPesan, fn ($query, string $tanggal) => $query->whereDate('tanggal_pesan', $tanggal))
             ->when($search, function ($query, string $keyword): void {
-                $query->whereRaw('LOWER(CAST(tanggal_pesan AS TEXT)) LIKE ?', ['%'.$keyword.'%']);
+                $query->where(function ($subQuery) use ($keyword): void {
+                    $subQuery
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(tanggal_pesan AS TEXT)) LIKE ?', ['%'.$keyword.'%']);
+                });
             })
             ->orderBy($sortField, $sortOrder)
             ->paginate($perPage)

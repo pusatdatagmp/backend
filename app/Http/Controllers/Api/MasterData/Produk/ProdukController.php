@@ -28,7 +28,8 @@ class ProdukController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(sku) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(sku) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(kategori) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(satuan) LIKE ?', ['%'.$keyword.'%']);

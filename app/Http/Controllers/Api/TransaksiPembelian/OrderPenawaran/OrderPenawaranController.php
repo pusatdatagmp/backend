@@ -28,7 +28,10 @@ class OrderPenawaranController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama_pembeli) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(tanggal_pesan AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(tanggal_dikirim AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_pembeli) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(keterangan) LIKE ?', ['%'.$keyword.'%']);
                 });
             })

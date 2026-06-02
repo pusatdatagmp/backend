@@ -51,13 +51,52 @@ class InvoicePenjualanController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nomor_invoice) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nomor_invoice) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(tanggal_invoice AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(total_tagihan AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(status_pembayaran) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereExists(function ($existsQuery) use ($keyword): void {
+                            $existsQuery
+                                ->select(DB::raw(1))
+                                ->from('tanda_terima')
+                                ->join('penjualan as invoice_search_penjualan', 'invoice_search_penjualan.id', '=', 'invoice_penjualan.penjualan_id')
+                                ->whereColumn('tanda_terima.sppg_id', 'invoice_penjualan.sppg_id')
+                                ->whereColumn('tanda_terima.tanggal', 'invoice_search_penjualan.tanggal')
+                                ->whereRaw('LOWER(tanda_terima.no_po) LIKE ?', ['%'.$keyword.'%']);
+                        })
+                        ->orWhereHas('penjualan', function ($penjualanQuery) use ($keyword): void {
+                            $penjualanQuery->where(function ($penjualanSubQuery) use ($keyword): void {
+                                $penjualanSubQuery
+                                    ->whereRaw('LOWER(kode_penjualan) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(CAST(tanggal AS TEXT)) LIKE ?', ['%'.$keyword.'%']);
+                            });
+                        })
+                        ->orWhereHas('bankRekening', function ($bankQuery) use ($keyword): void {
+                            $bankQuery->where(function ($bankSubQuery) use ($keyword): void {
+                                $bankSubQuery
+                                    ->whereRaw('LOWER(nama_bank) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(no_rek) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(atas_nama) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(cabang) LIKE ?', ['%'.$keyword.'%']);
+                            });
+                        })
+                        ->orWhereHas('perusahaan', function ($perusahaanQuery) use ($keyword): void {
+                            $perusahaanQuery->where(function ($perusahaanSubQuery) use ($keyword): void {
+                                $perusahaanSubQuery
+                                    ->whereRaw('LOWER(nama_perusahaan) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(nama_pic) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(tema_invoice) LIKE ?', ['%'.$keyword.'%']);
+                            });
+                        })
                         ->orWhereHas('sppg', function ($sppgQuery) use ($keyword): void {
-                            $sppgQuery
-                                ->whereRaw('LOWER(nama_sppg) LIKE ?', ['%'.$keyword.'%'])
-                                ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
-                                ->orWhereRaw('LOWER(no_penanggungjawab) LIKE ?', ['%'.$keyword.'%']);
+                            $sppgQuery->where(function ($sppgSubQuery) use ($keyword): void {
+                                $sppgSubQuery
+                                    ->whereRaw('LOWER(nama_sppg) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(no_penanggungjawab) LIKE ?', ['%'.$keyword.'%']);
+                            });
                         });
                 });
             })

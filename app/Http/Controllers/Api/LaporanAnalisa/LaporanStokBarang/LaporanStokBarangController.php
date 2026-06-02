@@ -54,9 +54,19 @@ class LaporanStokBarangController extends Controller
             $records = $this->collectStockRows($jenisStok, $gudangId, $periode, $tanggalAcuan)
                 ->when($search !== '', function (Collection $rows) use ($search): Collection {
                     return $rows->filter(function (array $row) use ($search): bool {
-                        return str_contains(strtolower($row['nama_barang']), $search)
-                            || str_contains(strtolower($row['nama_gudang'] ?? ''), $search)
-                            || str_contains(strtolower($row['jenis_stok'] ?? ''), $search);
+                        $haystack = implode(' ', [
+                            $row['id'] ?? '',
+                            $row['nama_barang'] ?? '',
+                            $row['nama_gudang'] ?? '',
+                            $row['jenis_stok'] ?? '',
+                            $row['qty'] ?? '',
+                            $row['satuan_terkecil'] ?? '',
+                            $row['harga_beli'] ?? '',
+                            $row['nilai_stok'] ?? '',
+                            $row['tanggal_masuk'] ?? '',
+                        ]);
+
+                        return str_contains(strtolower($haystack), $search);
                     })->values();
                 });
 

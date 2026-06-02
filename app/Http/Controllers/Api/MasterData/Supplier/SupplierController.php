@@ -28,7 +28,8 @@ class SupplierController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(no_telp) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(kategori) LIKE ?', ['%'.$keyword.'%']);

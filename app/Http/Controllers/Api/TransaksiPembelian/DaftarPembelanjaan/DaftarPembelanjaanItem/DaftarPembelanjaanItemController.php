@@ -59,8 +59,14 @@ class DaftarPembelanjaanItemController extends Controller
                 $normalizedKeyword = mb_strtolower(trim($keyword));
 
                 return $collection->filter(function (array $item) use ($normalizedKeyword): bool {
-                    return str_contains(mb_strtolower($item['nama_barang']), $normalizedKeyword)
-                        || str_contains(mb_strtolower($item['nama_supplier'] ?? ''), $normalizedKeyword);
+                    return str_contains((string) $item['id'], $normalizedKeyword)
+                        || str_contains(mb_strtolower($item['nama_barang']), $normalizedKeyword)
+                        || str_contains((string) $item['qty'], $normalizedKeyword)
+                        || str_contains(mb_strtolower($item['satuan'] ?? ''), $normalizedKeyword)
+                        || str_contains((string) $item['stok'], $normalizedKeyword)
+                        || str_contains((string) $item['kebutuhan'], $normalizedKeyword)
+                        || str_contains(mb_strtolower($item['nama_supplier'] ?? ''), $normalizedKeyword)
+                        || str_contains(mb_strtolower($item['keterangan'] ?? ''), $normalizedKeyword);
                 });
             })
             ->sort(function (array $first, array $second) use ($sortField, $sortOrder): int {

@@ -15,7 +15,7 @@ class PengeluaranController extends Controller
     {
         $filters = $request->validate([
             'search' => ['nullable', 'string'],
-            'sort_field' => ['nullable', Rule::in(['id', 'nama_operasional', 'tanggal_keluar', 'qty', 'satuan', 'harga_satuan'])],
+            'sort_field' => ['nullable', Rule::in(['id', 'nama_operasional', 'tanggal_keluar', 'qty', 'satuan', 'harga_satuan', 'total'])],
             'sort_order' => ['nullable', Rule::in(['asc', 'desc'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
@@ -29,11 +29,20 @@ class PengeluaranController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama_operasional) LIKE ?', ['%'.$keyword.'%'])
-                        ->orWhereRaw('LOWER(satuan) LIKE ?', ['%'.$keyword.'%']);
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_operasional) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(tanggal_keluar AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(qty AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(satuan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(harga_satuan AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST((qty * harga_satuan) AS TEXT)) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
-            ->orderBy($sortField, $sortOrder)
+            ->when(
+                $sortField === 'total',
+                fn ($query) => $query->orderByRaw('(qty * harga_satuan) '.$sortOrder),
+                fn ($query) => $query->orderBy($sortField, $sortOrder)
+            )
             ->paginate($perPage)
             ->withQueryString();
 

@@ -36,10 +36,12 @@ class KaryawanController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(jabatan) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
-                        ->orWhereRaw('LOWER(no_hp) LIKE ?', ['%'.$keyword.'%']);
+                        ->orWhereRaw('LOWER(no_hp) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(status) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

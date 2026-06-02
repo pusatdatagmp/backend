@@ -35,8 +35,14 @@ class WarehouseInboundController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(warehouse_inbounds.nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(warehouse_inbounds.id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(warehouse_inbounds.nama_barang) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(warehouse_inbounds.kategori) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(warehouse_inbounds.tanggal_masuk AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(warehouse_inbounds.qty AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(warehouse_inbounds.satuan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(warehouse_inbounds.harga_satuan AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(warehouse_inbounds.total_harga AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(warehouse_inbounds.nama_supplier) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(gudang.nama_gudang) LIKE ?', ['%'.$keyword.'%']);
                 });

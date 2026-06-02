@@ -33,12 +33,19 @@ class PenjualanController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(kode_penjualan) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(kode_penjualan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(tanggal AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(total_harga AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(status) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereHas('orderPenawaran', function ($orderQuery) use ($keyword): void {
-                            $orderQuery
-                                ->whereRaw('LOWER(nama_pembeli) LIKE ?', ['%'.$keyword.'%'])
-                                ->orWhereRaw('LOWER(keterangan) LIKE ?', ['%'.$keyword.'%']);
+                            $orderQuery->where(function ($orderSubQuery) use ($keyword): void {
+                                $orderSubQuery
+                                    ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(CAST(tanggal_dikirim AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(nama_pembeli) LIKE ?', ['%'.$keyword.'%'])
+                                    ->orWhereRaw('LOWER(keterangan) LIKE ?', ['%'.$keyword.'%']);
+                            });
                         });
                 });
             })

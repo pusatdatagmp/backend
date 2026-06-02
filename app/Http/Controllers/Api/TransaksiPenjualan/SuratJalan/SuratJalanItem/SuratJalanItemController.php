@@ -42,8 +42,12 @@ class SuratJalanItemController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama_barang) LIKE ?', ['%'.$keyword.'%'])
-                        ->orWhereRaw('LOWER(keterangan) LIKE ?', ['%'.$keyword.'%']);
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(qty AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(satuan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(keterangan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereHas('penjualanItem.perusahaan', fn ($perusahaanQuery) => $perusahaanQuery->whereRaw('LOWER(nama_perusahaan) LIKE ?', ['%'.$keyword.'%']));
                 });
             })
             ->orderBy('id')

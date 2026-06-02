@@ -377,20 +377,13 @@ class PenjualanItemController extends Controller
 
         if ($penjualan->order_penawaran_id === null) {
             return $storedItems
-                ->when($search, function (Collection $collection) use ($search): Collection {
-                    return $collection->filter(function (PenjualanItem $item) use ($search): bool {
-                        return str_contains(mb_strtolower($item->nama_barang), mb_strtolower($search));
-                    });
-                })
                 ->map(fn (PenjualanItem $item): array => $this->serializeItem($item))
+                ->when($search, fn (Collection $collection): Collection => $this->filterSerializedItems($collection, $search))
                 ->values();
         }
 
         $sourceItems = OrderPenawaranItem::query()
             ->where('order_penawaran_id', $penjualan->order_penawaran_id)
-            ->when($search, function ($query, string $keyword): void {
-                $query->whereRaw('LOWER(nama_barang) LIKE ?', ['%'.$keyword.'%']);
-            })
             ->orderBy('id')
             ->get()
             ->map(function (OrderPenawaranItem $sourceItem) use ($storedItemsBySource): array {
@@ -422,18 +415,41 @@ class PenjualanItemController extends Controller
                     'status_stok' => $stokTersedia >= (float) $sourceItem->qty ? 'berhasil' : 'pending',
                 ];
             })
+            ->when($search, fn (Collection $collection): Collection => $this->filterSerializedItems($collection, $search))
             ->values();
 
         $manualItems = $storedItems
             ->filter(fn (PenjualanItem $item): bool => $item->order_penawaran_item_id === null)
-            ->when($search, function (Collection $collection) use ($search): Collection {
-                return $collection->filter(function (PenjualanItem $item) use ($search): bool {
-                    return str_contains(mb_strtolower($item->nama_barang), mb_strtolower($search));
-                });
-            })
             ->map(fn (PenjualanItem $item): array => $this->serializeItem($item))
+            ->when($search, fn (Collection $collection): Collection => $this->filterSerializedItems($collection, $search))
             ->values();
 
         return $sourceItems->concat($manualItems)->values();
+    }
+
+    /**
+     * @param \Illuminate\Support\Collection<int, array<string, mixed>> $items
+     */
+    private function filterSerializedItems(Collection $items, string $search): Collection
+    {
+        $keyword = mb_strtolower($search);
+
+        return $items->filter(function (array $item) use ($keyword): bool {
+            $haystack = implode(' ', [
+                $item['id'] ?? null,
+                $item['nama_barang'] ?? null,
+                $item['gudang']['nama_gudang'] ?? null,
+                $item['perusahaan']['nama_perusahaan'] ?? null,
+                $item['qty'] ?? null,
+                $item['satuan'] ?? null,
+                $item['stok_tersedia'] ?? null,
+                $item['status_stok'] ?? null,
+                $item['harga_satuan'] ?? null,
+                $item['total_harga'] ?? null,
+                $item['keterangan'] ?? null,
+            ]);
+
+            return str_contains(mb_strtolower($haystack), $keyword);
+        });
     }
 }

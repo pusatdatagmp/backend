@@ -28,7 +28,9 @@ class ActivityLogController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(user_name) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(created_at AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(user_name) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(module) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(action) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(description) LIKE ?', ['%'.$keyword.'%'])

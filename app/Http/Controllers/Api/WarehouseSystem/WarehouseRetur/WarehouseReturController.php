@@ -34,7 +34,12 @@ class WarehouseReturController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(jenis_stok) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(qty_retur AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(satuan_terkecil) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(CAST(harga_beli AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(alasan) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereHas('gudang', fn ($gudangQuery) => $gudangQuery->whereRaw('LOWER(nama_gudang) LIKE ?', ['%'.$keyword.'%']));
                 });

@@ -28,7 +28,8 @@ class KategoriController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(kode) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(kode) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(nama_satuan) LIKE ?', ['%'.$keyword.'%']);
                 });
             })

@@ -39,9 +39,12 @@ class PerusahaanController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->whereRaw('LOWER(nama_perusahaan) LIKE ?', ['%'.$keyword.'%'])
+                        ->whereRaw('LOWER(CAST(id AS TEXT)) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_perusahaan) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
-                        ->orWhereRaw('LOWER(nama_pic) LIKE ?', ['%'.$keyword.'%']);
+                        ->orWhereRaw('LOWER(nama_pic) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(tema_invoice) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(logo_path) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)
