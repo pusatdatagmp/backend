@@ -24,7 +24,7 @@ class WarehouseReturController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama_barang';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -34,9 +34,9 @@ class WarehouseReturController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nama_barang', 'like', '%'.$keyword.'%')
-                        ->orWhere('alasan', 'like', '%'.$keyword.'%')
-                        ->orWhereHas('gudang', fn ($gudangQuery) => $gudangQuery->where('nama_gudang', 'like', '%'.$keyword.'%'));
+                        ->whereRaw('LOWER(nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(alasan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereHas('gudang', fn ($gudangQuery) => $gudangQuery->whereRaw('LOWER(nama_gudang) LIKE ?', ['%'.$keyword.'%']));
                 });
             })
             ->orderBy($sortField, $sortOrder)

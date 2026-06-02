@@ -26,7 +26,7 @@ class SppgController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama_sppg';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -35,11 +35,11 @@ class SppgController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nama_sppg', 'like', '%'.$keyword.'%')
-                        ->orWhere('alamat', 'like', '%'.$keyword.'%')
-                        ->orWhere('nama_yayasan', 'like', '%'.$keyword.'%')
-                        ->orWhere('nama_penanggungjawab', 'like', '%'.$keyword.'%')
-                        ->orWhere('no_penanggungjawab', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(nama_sppg) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_yayasan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_penanggungjawab) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(no_penanggungjawab) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

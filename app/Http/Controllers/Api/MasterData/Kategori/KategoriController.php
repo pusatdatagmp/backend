@@ -19,7 +19,7 @@ class KategoriController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'kode';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -28,8 +28,8 @@ class KategoriController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('kode', 'like', '%'.$keyword.'%')
-                        ->orWhere('nama_satuan', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(kode) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_satuan) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

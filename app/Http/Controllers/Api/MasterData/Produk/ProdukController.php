@@ -19,7 +19,7 @@ class ProdukController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -28,9 +28,10 @@ class ProdukController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('sku', 'like', '%'.$keyword.'%')
-                        ->orWhere('nama', 'like', '%'.$keyword.'%')
-                        ->orWhere('kategori', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(sku) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(kategori) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(satuan) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

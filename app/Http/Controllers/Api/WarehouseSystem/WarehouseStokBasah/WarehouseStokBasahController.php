@@ -20,7 +20,7 @@ class WarehouseStokBasahController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama_barang';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -42,8 +42,8 @@ class WarehouseStokBasahController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('warehouse_stok_basah.nama_barang', 'like', '%'.$keyword.'%')
-                        ->orWhere('gudang.nama_gudang', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(warehouse_stok_basah.nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(gudang.nama_gudang) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->groupBy(

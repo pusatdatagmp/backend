@@ -26,7 +26,7 @@ class TandaTerimaController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'tanggal';
         $sortOrder = $filters['sort_order'] ?? 'desc';
         $perPage = $filters['per_page'] ?? 10;
@@ -36,12 +36,12 @@ class TandaTerimaController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nomor_tanda_terima', 'like', '%'.$keyword.'%')
-                        ->orWhere('nomor_surat_jalan', 'like', '%'.$keyword.'%')
-                        ->orWhere('no_po', 'like', '%'.$keyword.'%')
-                        ->orWhereHas('sppg', fn ($sppgQuery) => $sppgQuery->where('nama_sppg', 'like', '%'.$keyword.'%'))
-                        ->orWhereHas('akuntan', fn ($karyawanQuery) => $karyawanQuery->where('nama', 'like', '%'.$keyword.'%'))
-                        ->orWhereHas('driver', fn ($karyawanQuery) => $karyawanQuery->where('nama', 'like', '%'.$keyword.'%'));
+                        ->whereRaw('LOWER(nomor_tanda_terima) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nomor_surat_jalan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(no_po) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereHas('sppg', fn ($sppgQuery) => $sppgQuery->whereRaw('LOWER(nama_sppg) LIKE ?', ['%'.$keyword.'%']))
+                        ->orWhereHas('akuntan', fn ($karyawanQuery) => $karyawanQuery->whereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%']))
+                        ->orWhereHas('driver', fn ($karyawanQuery) => $karyawanQuery->whereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%']));
                 });
             })
             ->orderBy($sortField, $sortOrder)

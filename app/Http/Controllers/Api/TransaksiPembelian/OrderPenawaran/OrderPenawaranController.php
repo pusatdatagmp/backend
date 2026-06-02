@@ -19,7 +19,7 @@ class OrderPenawaranController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'tanggal_pesan';
         $sortOrder = $filters['sort_order'] ?? 'desc';
         $perPage = $filters['per_page'] ?? 10;
@@ -28,8 +28,8 @@ class OrderPenawaranController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nama_pembeli', 'like', '%'.$keyword.'%')
-                        ->orWhere('keterangan', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(nama_pembeli) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(keterangan) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

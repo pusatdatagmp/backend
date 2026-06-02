@@ -27,7 +27,7 @@ class KaryawanController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -36,10 +36,10 @@ class KaryawanController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nama', 'like', '%'.$keyword.'%')
-                        ->orWhere('jabatan', 'like', '%'.$keyword.'%')
-                        ->orWhere('alamat', 'like', '%'.$keyword.'%')
-                        ->orWhere('no_hp', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(jabatan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(no_hp) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

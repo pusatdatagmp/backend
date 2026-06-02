@@ -28,7 +28,7 @@ class PenjualanItemController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama_barang';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -389,7 +389,7 @@ class PenjualanItemController extends Controller
         $sourceItems = OrderPenawaranItem::query()
             ->where('order_penawaran_id', $penjualan->order_penawaran_id)
             ->when($search, function ($query, string $keyword): void {
-                $query->where('nama_barang', 'like', '%'.$keyword.'%');
+                $query->whereRaw('LOWER(nama_barang) LIKE ?', ['%'.$keyword.'%']);
             })
             ->orderBy('id')
             ->get()

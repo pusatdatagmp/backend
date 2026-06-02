@@ -19,7 +19,7 @@ class SupplierController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -28,10 +28,10 @@ class SupplierController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nama', 'like', '%'.$keyword.'%')
-                        ->orWhere('alamat', 'like', '%'.$keyword.'%')
-                        ->orWhere('no_telp', 'like', '%'.$keyword.'%')
-                        ->orWhere('kategori', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(nama) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(no_telp) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(kategori) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

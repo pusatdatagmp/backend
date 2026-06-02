@@ -19,7 +19,7 @@ class BankRekeningController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama_bank';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -28,10 +28,10 @@ class BankRekeningController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nama_bank', 'like', '%'.$keyword.'%')
-                        ->orWhere('no_rek', 'like', '%'.$keyword.'%')
-                        ->orWhere('atas_nama', 'like', '%'.$keyword.'%')
-                        ->orWhere('cabang', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(nama_bank) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(no_rek) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(atas_nama) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(cabang) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

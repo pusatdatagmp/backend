@@ -30,7 +30,7 @@ class PerusahaanController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama_perusahaan';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -39,9 +39,9 @@ class PerusahaanController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nama_perusahaan', 'like', '%'.$keyword.'%')
-                        ->orWhere('alamat', 'like', '%'.$keyword.'%')
-                        ->orWhere('nama_pic', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(nama_perusahaan) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(nama_pic) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

@@ -19,7 +19,7 @@ class ArmadaController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'nama_unit';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -28,9 +28,9 @@ class ArmadaController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nama_unit', 'like', '%'.$keyword.'%')
-                        ->orWhere('no_pol', 'like', '%'.$keyword.'%')
-                        ->orWhere('jenis_kendaraan', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(nama_unit) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(no_pol) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(jenis_kendaraan) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

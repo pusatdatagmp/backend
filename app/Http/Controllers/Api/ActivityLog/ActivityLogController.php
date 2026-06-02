@@ -19,7 +19,7 @@ class ActivityLogController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'id';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -28,11 +28,11 @@ class ActivityLogController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('user_name', 'like', '%'.$keyword.'%')
-                        ->orWhere('module', 'like', '%'.$keyword.'%')
-                        ->orWhere('action', 'like', '%'.$keyword.'%')
-                        ->orWhere('description', 'like', '%'.$keyword.'%')
-                        ->orWhere('request_path', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(user_name) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(module) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(action) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(description) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(request_path) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

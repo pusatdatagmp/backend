@@ -20,7 +20,7 @@ class PemasukanController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'tanggal';
         $sortOrder = $filters['sort_order'] ?? 'desc';
         $perPage = $filters['per_page'] ?? 10;
@@ -29,8 +29,8 @@ class PemasukanController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('jenis', 'like', '%'.$keyword.'%')
-                        ->orWhere('keterangan', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(jenis) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(keterangan) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy($sortField, $sortOrder)

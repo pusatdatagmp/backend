@@ -16,12 +16,14 @@ class DaftarPembelanjaanController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = $request->validate([
+            'search' => ['nullable', 'string'],
             'tanggal_pesan' => ['nullable', 'date'],
             'sort_field' => ['nullable', Rule::in(['id', 'tanggal_pesan'])],
             'sort_order' => ['nullable', Rule::in(['asc', 'desc'])],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $tanggalPesan = $filters['tanggal_pesan'] ?? null;
         $sortField = $filters['sort_field'] ?? 'tanggal_pesan';
         $sortOrder = $filters['sort_order'] ?? 'desc';
@@ -29,6 +31,9 @@ class DaftarPembelanjaanController extends Controller
 
         $records = DaftarPembelanjaan::query()
             ->when($tanggalPesan, fn ($query, string $tanggal) => $query->whereDate('tanggal_pesan', $tanggal))
+            ->when($search, function ($query, string $keyword): void {
+                $query->whereRaw('LOWER(CAST(tanggal_pesan AS TEXT)) LIKE ?', ['%'.$keyword.'%']);
+            })
             ->orderBy($sortField, $sortOrder)
             ->paginate($perPage)
             ->withQueryString();

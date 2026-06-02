@@ -35,7 +35,7 @@ class InvoicePenjualanController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'tanggal_invoice';
         $sortOrder = $filters['sort_order'] ?? 'desc';
         $perPage = $filters['per_page'] ?? 10;
@@ -51,13 +51,13 @@ class InvoicePenjualanController extends Controller
             ->when($search, function ($query, string $keyword): void {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('nomor_invoice', 'like', '%'.$keyword.'%')
-                        ->orWhere('status_pembayaran', 'like', '%'.$keyword.'%')
+                        ->whereRaw('LOWER(nomor_invoice) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(status_pembayaran) LIKE ?', ['%'.$keyword.'%'])
                         ->orWhereHas('sppg', function ($sppgQuery) use ($keyword): void {
                             $sppgQuery
-                                ->where('nama_sppg', 'like', '%'.$keyword.'%')
-                                ->orWhere('alamat', 'like', '%'.$keyword.'%')
-                                ->orWhere('no_penanggungjawab', 'like', '%'.$keyword.'%');
+                                ->whereRaw('LOWER(nama_sppg) LIKE ?', ['%'.$keyword.'%'])
+                                ->orWhereRaw('LOWER(alamat) LIKE ?', ['%'.$keyword.'%'])
+                                ->orWhereRaw('LOWER(no_penanggungjawab) LIKE ?', ['%'.$keyword.'%']);
                         });
                 });
             })

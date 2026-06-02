@@ -23,7 +23,7 @@ class WarehouseInboundController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'id';
         $sortOrder = $filters['sort_order'] ?? 'asc';
         $perPage = $filters['per_page'] ?? 10;
@@ -35,10 +35,10 @@ class WarehouseInboundController extends Controller
             ->when($search, function ($query, string $keyword) {
                 $query->where(function ($subQuery) use ($keyword): void {
                     $subQuery
-                        ->where('warehouse_inbounds.nama_barang', 'like', '%'.$keyword.'%')
-                        ->orWhere('warehouse_inbounds.kategori', 'like', '%'.$keyword.'%')
-                        ->orWhere('warehouse_inbounds.nama_supplier', 'like', '%'.$keyword.'%')
-                        ->orWhere('gudang.nama_gudang', 'like', '%'.$keyword.'%');
+                        ->whereRaw('LOWER(warehouse_inbounds.nama_barang) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(warehouse_inbounds.kategori) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(warehouse_inbounds.nama_supplier) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(gudang.nama_gudang) LIKE ?', ['%'.$keyword.'%']);
                 });
             })
             ->orderBy(

@@ -14,7 +14,7 @@ class UserController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $search = trim((string) $request->query('search', ''));
+        $search = mb_strtolower(trim((string) $request->query('search', '')));
         $perPage = max(1, min((int) $request->query('per_page', 10), 100));
         $sortField = (string) $request->query('sort_field', 'id');
         $sortOrder = strtolower((string) $request->query('sort_order', 'desc')) === 'asc' ? 'asc' : 'desc';
@@ -31,10 +31,11 @@ class UserController extends Controller
 
         if ($search !== '') {
             $query->where(function ($builder) use ($search): void {
-                $builder->where('nama', 'like', '%' . $search . '%')
-                    ->orWhere('name', 'like', '%' . $search . '%')
-                    ->orWhere('email', 'like', '%' . $search . '%')
-                    ->orWhere('role', 'like', '%' . $search . '%');
+                $builder->whereRaw('LOWER(nama) LIKE ?', ['%' . $search . '%'])
+                    ->orWhereRaw('LOWER(name) LIKE ?', ['%' . $search . '%'])
+                    ->orWhereRaw('LOWER(email) LIKE ?', ['%' . $search . '%'])
+                    ->orWhereRaw('LOWER(role) LIKE ?', ['%' . $search . '%'])
+                    ->orWhereRaw('LOWER(role_label) LIKE ?', ['%' . $search . '%']);
             });
         }
 

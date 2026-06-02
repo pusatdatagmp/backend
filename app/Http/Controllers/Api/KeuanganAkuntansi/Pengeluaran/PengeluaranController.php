@@ -20,14 +20,18 @@ class PengeluaranController extends Controller
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ]);
 
-        $search = $filters['search'] ?? null;
+        $search = isset($filters['search']) ? mb_strtolower(trim($filters['search'])) : null;
         $sortField = $filters['sort_field'] ?? 'tanggal_keluar';
         $sortOrder = $filters['sort_order'] ?? 'desc';
         $perPage = $filters['per_page'] ?? 10;
 
         $records = Pengeluaran::query()
             ->when($search, function ($query, string $keyword): void {
-                $query->where('nama_operasional', 'like', '%'.$keyword.'%');
+                $query->where(function ($subQuery) use ($keyword): void {
+                    $subQuery
+                        ->whereRaw('LOWER(nama_operasional) LIKE ?', ['%'.$keyword.'%'])
+                        ->orWhereRaw('LOWER(satuan) LIKE ?', ['%'.$keyword.'%']);
+                });
             })
             ->orderBy($sortField, $sortOrder)
             ->paginate($perPage)
